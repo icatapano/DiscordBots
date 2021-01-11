@@ -10,6 +10,7 @@
   "author": "Ian Catapano",
   "license": "ISC",
   "dependencies": {
+    "@keyv/mongo": "^1.1.0",
     "discord.io": "^2.5.3",
     "discord.js": "^12.5.1",
     "dotenv": "^8.2.0",

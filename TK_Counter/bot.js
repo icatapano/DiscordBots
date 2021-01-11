@@ -19,7 +19,7 @@ function processCommand(receivedMessage) {
   let fullCommand = receivedMessage.content.substr(1) // Remove the leading exclamation mark
   let splitCommand = fullCommand.split(" ") // Split the message up in to pieces for each space
   let primaryCommand = splitCommand[0] // The first word directly after the exclamation is the command
-  let argument = splitCommand[1] // This should be the @username
+  let argument = receivedMessage.mentions.users.first() //splitCommand[1] // This should be the @username
 
   console.log("Command received: " + primaryCommand)
   console.log("Argument: " + argument) // There may not be any arguments
@@ -29,7 +29,7 @@ function processCommand(receivedMessage) {
   } else if (primaryCommand == "teamkill") {
       teamkillCounter(argument, receivedMessage)
   } else if (primaryCommand == "total") {
-      displayCount(receivedMessage) 
+      displayCount(client) 
   }else {
       receivedMessage.channel.send("I don't understand the command. Try `!help`, `!teamkill`, or '!total'")
   }
@@ -41,6 +41,9 @@ function helpCommand(receivedMessage) {
 }
 
 function teamkillCounter(argument, receivedMessage) {
+  if (!argument) {
+    return receivedMessage.reply('you need to follow the !teamkill with the tagged user!')
+  }
   var i = 0
   var found = false
   teamkillers.forEach((value) => {
@@ -61,7 +64,7 @@ function teamkillCounter(argument, receivedMessage) {
 function displayCount (receivedMessage) {
   i = 0
   teamkillers.forEach((value) => {
-    receivedMessage.channel.send(value + " has a total of " + killCount[i] + " team kills.")
+    receivedMessage.channel.send(value.username + " has a total of " + killCount[i] + " teamkills.")
     i = i + 1
   })
 }
