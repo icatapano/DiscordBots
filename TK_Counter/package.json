@@ -1,5 +1,5 @@
 {
-  "name": "TK_Counter",
+  "name": "Teamkill Counter",
   "version": "1.0.0",
   "description": "Discord Bot to manually track teamkills",
   "main": "index.js",
