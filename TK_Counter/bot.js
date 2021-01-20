@@ -1,13 +1,12 @@
 const Discord = require('discord.js');
 const client = new Discord.Client();
 const auth = require('./auth.json');
-// const Keyv = require('keyv');
-// const keyv = new keyv(auth.MONGO_CONNECT)
+const PlayerModel = require('./Player');
+const mongoose = require('mongoose');
 
-var teamkillers = []; // Empty array to be populated with the teamkillers, this will be removed once DB is added.
-var killCount = []; // Corrisponding kill count for person commited the kill, also will be removed with the addition of the DB.
+//client.on('ready', () => console.info(`logged in as ${client.user.tag}`));
 
-client.on('message', receivedMessage => {
+client.on('message', async (receivedMessage) => {
   if (receivedMessage.author == client.user) { // Prevent bot from responding to itself and causing a infinite loop.
       return;
   }
@@ -15,7 +14,16 @@ client.on('message', receivedMessage => {
   if (receivedMessage.content.startsWith("!")) { // Check to see if we have a bot command being sent.
       processInput(receivedMessage);
   }
-})
+});
+
+(async () => {
+  await mongoose.connect(auth.MONGO_CONNECT, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    useFindAndModify: false,
+    useCreateIndex: true
+  });
+})()
 
 function processInput(receivedMessage) {
   let splitInput = receivedMessage.content.split(" "); // Split the menu option from the tagged user if there is one.
@@ -31,8 +39,14 @@ function processInput(receivedMessage) {
     case '!teamkill':
       teamkillCounter(receivedMessage);
       break;
+    case '!removekill':
+      subtractTeamkill(receivedMessage);
+      break;
     case '!total':
       displayCount(receivedMessage);
+      break;
+    case '!delete':
+      removeUser(receivedMessage);
       break;
     default:
       receivedMessage.channel.send("I don't understand the command. Try `!help`, `!teamkill`, or `!total`");
@@ -46,41 +60,62 @@ function helpCommand(receivedMessage) {
 }
 
 // Add the user ID if it doesn't exist and increament the counter for that ID by 1.
-function teamkillCounter(receivedMessage) {
+async function teamkillCounter(receivedMessage) {
   let argument = receivedMessage.mentions.users.first(); // Retrieves the user's ID and assigns to the variable
 
   console.log("Argument: " + argument); // Used for debugging but sending this information to the console window.
 
   if (!argument) {
-    return receivedMessage.reply('you need to follow the !teamkill with the tagged user!'); // Command was issued without a tagged user, reminder of how it should be used.
+    return receivedMessage.reply('You need to follow the !teamkill with the tagged user!'); // Command was issued without a tagged user, reminder of how it should be used.
+  } else {
+    await PlayerModel.findOneAndUpdate({_id: receivedMessage.mentions.users.first()}, { $inc: {count: 1} }, {upsert: true, new: true});
   }
-  let i = 0; // Counter for array elements.
-  let found = false; // Flag to identify if ID exists or not.
+}
 
-  // Step through array checking if ID exist and adding a kill to the count.
-  teamkillers.forEach((value) => {
-      if (value == argument){
-        killCount[i] = killCount[i] + 1;
-        found = true;
-      }else{
-        i = i + 1; 
-      }
-  })
-  // If ID wasnt found, it is added here with a kill count of 1.
-  if (found == false){
-    teamkillers[i] = argument; 
-    killCount[i] = 1;
+// Remove one from the teamkill counter on the specified user, intended for if a mistake was made.
+async function subtractTeamkill(receivedMessage) {
+  let argument = receivedMessage.mentions.users.first(); // Retrieves the user's ID and assigns to the variable
+
+  console.log("Argument: " + argument); // Used for debugging but sending this information to the console window.
+
+  if (!argument) {
+    return receivedMessage.reply('You need to follow the !removekill with the tagged user!'); // Command was issued without a tagged user, reminder of how it should be used.
+  } else {
+    await PlayerModel.findOneAndUpdate({_id: receivedMessage.mentions.users.first()}, { $inc: {count: -1} }, {new: true});
   }
+
   displayCount(receivedMessage);
 }
 
+// Remove user from database
+async function removeUser(receivedMessage) {
+  let argument = receivedMessage.mentions.users.first(); // Retrieves the user's ID and assigns to the variable
+
+  console.log("Argument: " + argument); // Used for debugging but sending this information to the console window.
+
+  if (!argument) {
+    return receivedMessage.reply('You need to follow the !delete with the tagged user!'); // Command was issued without a tagged user, reminder of how it should be used.
+  } else {
+    try {
+      await PlayerModel.deleteOne({_id: receivedMessage.mentions.users.first()});
+    } catch (error) {
+      console.error(error);
+    }
+  }
+}
+
 // Displays all users and the total of friendly kills they have.
-function displayCount(receivedMessage) {
-  i = 0
-  teamkillers.forEach((value) => {
-    receivedMessage.channel.send(value.username + " has a total of " + killCount[i] + " teamkills.")
-    i = i + 1
-  })
+async function displayCount(receivedMessage) {
+  try {
+    const doc = await PlayerModel.find();
+    var len = doc.length;
+
+    for (var i = 0; i < len; i++) {
+      receivedMessage.channel.send(doc[i]._id + " has " + doc[i].count + " teamkills.");
+    }
+  } catch (error){
+    console.error(error);
+  }
 }
 
 client.login(auth.DISCORD_TOKEN) // Logs bot in with it's token.
