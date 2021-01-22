@@ -4,9 +4,11 @@ const auth = require('./auth.json');
 const PlayerModel = require('./Player');
 const mongoose = require('mongoose');
 
+const gifs = ['../gifs/temp.jpg', '../gifs/shush1.gif', '../gifs/shush2.gif', '../gifs/needAhug.gif']; // This will be changed to pull all image files from specified directory, this is temp for testing.
+
 // Log bot login and set a status message.
 client.on("ready", () => {
-  client.user.setActivity("for !help", {type: "WATCHING"});
+  client.user.setActivity("for !help", {type: "WATCHING"}); //For now the CUSTOM_STATUS type doesn't seem to be working.
   console.log(`Logged in as ${client.user.tag}!`);
 });
 
@@ -15,7 +17,14 @@ client.on('message', async (receivedMessage) => {
   if (receivedMessage.author == client.user) { // Prevent bot from responding to itself and causing a infinite loop.
       return;
   }
-  
+
+  // This is commented out till I determine the logic I want to use.
+  /*if (receivedMessage.author.username == "Lutherdawg") { 
+    const gif = gifs[Math.floor(Math.random() * gifs.length)];
+    const gifEmbed = new Discord.MessageEmbed().setTitle("For you " + receivedMessage.author.username).attachFiles(gif);
+    receivedMessage.reply(gifEmbed);
+  } */
+
   if (receivedMessage.content.startsWith("!")) { // Check to see if we have a bot command being sent.
       processInput(receivedMessage);
   }
@@ -44,8 +53,8 @@ function processInput(receivedMessage) {
     case '!help':
       helpCommand(receivedMessage);
       break;
-    case '!teamkill':
-      teamkillCounter(receivedMessage);
+    case '!addkill':
+      addTeamkill(receivedMessage);
       break;
     case '!removekill':
       subtractTeamkill(receivedMessage);
@@ -63,14 +72,14 @@ function processInput(receivedMessage) {
 
 // List off the various commands and how to use them for the user.
 function helpCommand(receivedMessage) {
-  receivedMessage.channel.send("<!teamkill @username> will add 1 teamkill to that user.");
+  receivedMessage.channel.send("<!addkill @username> will add 1 teamkill to that user.");
   receivedMessage.channel.send("<!removekill @username> will subtract 1 teamkill from that user. This is for when mistakes are made, don't make me block you!");
   receivedMessage.channel.send("<!delete @username> will completely remove that user from the database. Again, don't make me!");
   receivedMessage.channel.send("<!total> will display all users with teamkills and their counts.");
 }
 
 // Add the user ID if it doesn't exist and increament the counter for that ID by 1.
-async function teamkillCounter(receivedMessage) {
+async function addTeamkill(receivedMessage) {
   let argument = receivedMessage.mentions.users.first().username; // Retrieves the user's ID and assigns to the variable
 
   console.log("Argument: " + argument); // Used for debugging but sending this information to the console window.
@@ -78,7 +87,7 @@ async function teamkillCounter(receivedMessage) {
   if (!argument) {
     return receivedMessage.reply('Error! No @username followed the command. Type <!help> for more informaiton.'); // Command was issued without a tagged user, reminder of how it should be used.
   } else {
-    await PlayerModel.findOneAndUpdate({_id: receivedMessage.mentions.users.first().username}, { $inc: {count: 1} }, {upsert: true, new: true});
+    await PlayerModel.findOneAndUpdate({name: receivedMessage.mentions.users.first().username}, { $inc: {count: 1} }, {upsert: true, new: true});
   }
   displayCount(receivedMessage);
 }
@@ -92,7 +101,7 @@ async function subtractTeamkill(receivedMessage) {
   if (!argument) {
     return receivedMessage.reply('Error! No @username followed the command. Type <!help> for more informaiton.'); // Command was issued without a tagged user, reminder of how it should be used.
   } else {
-    await PlayerModel.findOneAndUpdate({_id: receivedMessage.mentions.users.first().username}, { $inc: {count: -1} }, {new: true});
+    await PlayerModel.findOneAndUpdate({name: receivedMessage.mentions.users.first().username}, { $inc: {count: -1} }, {new: true});
   }
 
   displayCount(receivedMessage);
@@ -108,7 +117,7 @@ async function removeUser(receivedMessage) {
     return receivedMessage.reply('Error! No @username followed the command. Type <!help> for more informaiton.'); // Command was issued without a tagged user, reminder of how it should be used.
   } else {
     try {
-      await PlayerModel.deleteOne({_id: receivedMessage.mentions.users.first().username});
+      await PlayerModel.deleteOne({name: receivedMessage.mentions.users.first().username});
     } catch (error) {
       console.error(error);
     }
@@ -122,7 +131,7 @@ async function displayCount(receivedMessage) {
     var len = doc.length;
 
     for (var i = 0; i < len; i++) {
-      receivedMessage.channel.send(doc[i]._id + " has " + doc[i].count + " teamkills.");
+      receivedMessage.channel.send(doc[i].name + " has " + doc[i].count + " teamkills.");
     }
   } catch (error){
     console.error(error);

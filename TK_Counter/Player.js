@@ -1,7 +1,7 @@
 const {Schema, model} = require('mongoose');
 
 const Player = new Schema({
-    _id: String,
+    name: String,
     count: { type: Number, default: 0 }
 });
 
